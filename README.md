@@ -8,11 +8,13 @@ Bypasses Steam API dll integrity/size check by hooking CreateFile API.
 
 ## Usage
 
+* Rename original `steam_api(64).dll` to `steam_api(64).org` or `steam_api(64).api.bak` or `steam_api(64)_o.dll` first.
+
 ### Method 1
 
-* Use CFF Explorer and add `SteamAPICheckBypass` dll import to game main exe, then put the `SteamAPICheckBypass.dll` dll beside game exe.
+* Use CFF Explorer and add `SteamAPICheckBypass` dll import to game main exe, then put the `SteamAPICheckBypass(x32).dll` dll beside game exe.
 
-### Method 2 (VersionShim)
+### Method 2 (VersionShim) (x64 for pre-built version.dll)
 
 * Put `SteamAPICheckBypass.dll` `version.dll` `libraries.txt` beside game exe.
 
