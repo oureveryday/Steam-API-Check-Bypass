@@ -8,8 +8,6 @@ Bypasses Steam API dll integrity/size check by hooking CreateFile API.
 
 ## Usage
 
-* Rename original `steam_api(64).dll` to `steam_api(64).org` or `steam_api(64).api.bak` or `steam_api(64)_o.dll` first.
-
 ### Method 1
 
 * Use CFF Explorer and add `SteamAPICheckBypass` dll import to game main exe, then put the `SteamAPICheckBypass(x32).dll` dll beside game exe.
@@ -17,6 +15,32 @@ Bypasses Steam API dll integrity/size check by hooking CreateFile API.
 ### Method 2 (VersionShim) (x64 for pre-built version.dll)
 
 * Put `SteamAPICheckBypass.dll` `version.dll` `libraries.txt` beside game exe.
+
+## Configuration (Optional)
+
+* Create `SteamAPICheckBypass.ini` and write file names you want to replace. Example:
+
+```text
+[Replace]
+OriginalFileFile=ReplaceFileName
+steam_api64.dll=steam_api64.dll.bak
+steam_api.dll=steam_api.dll.bak
+
+[AfterFirstTime]
+OriginalFileFile=0
+steam_api.dll=0
+```
+
+* `Replace`: The file name to replace.
+* `AfterFirstTime`: Start to replace after the first read of the file.
+
+## Internal Process
+
+1. The Crack will check `useinternallist` in the source code, if it's true, it will use `internalreplaceList`.
+
+2. The Crack will try to parse the ini file and add them into the replace list.
+
+3. If ini file not exist, try find `steam_api(64).dll.bak`, `steam_api(64).org`,`steam_api(64)_o.dll` and add the existed file into replace list.
 
 ## Dependencies
 

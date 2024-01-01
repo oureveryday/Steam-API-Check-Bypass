@@ -5,21 +5,47 @@
 
 #include "detours.h"
 #include "Console.h"
-#include <winternl.h>
-#include <Windows.h>
-#include <intrin.h>
-#include <iostream>
+#include <map>
 #include <string>
+#include <vector>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
 
 #pragma comment(lib, "detours.lib")
 #pragma comment(lib, "ntdll.lib")
 
-#pragma region Utils
+struct Replace
+{
+	std::string origname;
+	std::string replacename;
+	bool replaceafterfirsttime;    // Replace reading request after reading for first time
+	bool firstime = false;        // first time read indicator, should always be false
+};
 
-wchar_t steamAPI_Path[MAX_PATH];
-wchar_t steamAPI64_Path[MAX_PATH];
-bool steamAPI_P = false;
-bool steamAPI64_P = false;
+//----------Configuration start---------------
+
+bool useinternallist = false;   //Use built-in replace list without reading .ini file
+
+std::vector<Replace> internalreplaceList = {
+		{"steam_api.dll", "steam_api.org", false, false},
+		{"steam_api64.dll", "steam_api64.org", false, false},
+};//internal replace list example
+
+//----------Configuration end-----------------
+
+
+#pragma region Utils
+bool isFileExist(const wchar_t* fileName) {
+	HANDLE hFile = CreateFileW(fileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+		return true;
+	}
+	return false;
+}
+
 
 void PrintLog(std::string str)
 {
@@ -33,6 +59,38 @@ void PrintLog(std::string str)
 	OutputDebugString(wideString);
 	delete[] wideString;
 }
+std::string convertWCharToString(const wchar_t* wideString) {
+	// Get the length of the converted string
+	int size = WideCharToMultiByte(CP_UTF8, 0, wideString, -1, NULL, 0, NULL, NULL);
+
+	// Allocate a buffer for the converted string
+	char* buffer = new char[size];
+
+	// Convert the wchar_t string to a char string
+	WideCharToMultiByte(CP_UTF8, 0, wideString, -1, buffer, size, NULL, NULL);
+
+	// Create a std::string from the char string
+	std::string convertedString(buffer);
+
+	// Clean up the allocated buffer
+	delete[] buffer;
+
+	return convertedString;
+}
+
+wchar_t const* GetCurrentPath()
+{
+	wchar_t exePath[MAX_PATH];
+	GetModuleFileNameW(NULL, exePath, MAX_PATH);
+	wchar_t* lastBackslash = wcsrchr(exePath, L'\\');
+	if (lastBackslash != nullptr) {
+		*lastBackslash = L'\0';  // Null-terminate to get the directory path
+	}
+	return exePath;
+}
+#pragma endregion
+
+std::vector<Replace> replaceList;
 
 HANDLE(WINAPI* OrigCreateFileW) (
 	LPCWSTR lpFileName,
@@ -52,6 +110,41 @@ HANDLE(WINAPI* OrigCreateFileA) (
 	DWORD dwFlagsAndAttributes,
 	HANDLE hTemplateFile) = CreateFileA;
 
+std::string GetReplacedPath(std::string path)
+{
+	// Get the file name from the path
+	size_t lastSlash = path.find_last_of('/');
+	size_t lastBackslash = path.find_last_of('\\');
+	size_t lastSeparator = (lastSlash > lastBackslash) ? lastSlash : lastBackslash;
+	std::string filename = path.substr(lastSeparator + 1);
+
+	// Check if the file name matches any entry in the replaceList
+	for (Replace& replace : replaceList)
+	{
+		if (filename.find(replace.origname) != std::string::npos)
+		{
+			
+			replace.firstime = true;
+
+			if (replace.replaceafterfirsttime && !replace.firstime)
+			{
+				PrintLog("Reading " + replace.origname + "for first time.");
+				break;
+			}
+			PrintLog("Reading " + replace.origname + ",Replacing...");
+			// Replace the path's filename with replacename
+			size_t pos = path.find_last_of("/\\");
+			path = path.substr(0, pos + 1) + replace.replacename;
+			PrintLog(path);
+			// Set firstime to true if replaceafterfirsttime is true and firstime is false
+			
+
+			break; // No need to check further once a replacement is made
+		}
+	}
+
+	return path;
+}
 
 HANDLE WINAPI CreateFileAHook(
 	LPCSTR lpFileName,
@@ -62,30 +155,9 @@ HANDLE WINAPI CreateFileAHook(
 	DWORD dwFlagsAndAttributes,
 	HANDLE hTemplateFile)
 {
-	LPCSTR newFileName;
-
 	std::string origpath = std::string(lpFileName);
-	std::transform(origpath.begin(), origpath.end(), origpath.begin(), tolower);
-	if ((std::string::npos != origpath.find("steam_api.dll")) && steamAPI_P)
-	{
-		PrintLog("Detected reading steam_api.dll at CreateFileA, replacing...");
-		int bufferSize = WideCharToMultiByte(CP_UTF8, 0, steamAPI_Path, -1, NULL, 0, NULL, NULL);
-		LPSTR ansiString = new char[bufferSize];
-		WideCharToMultiByte(CP_UTF8, 0, steamAPI_Path, -1, ansiString, bufferSize, NULL, NULL);
-		newFileName = ansiString;
-	}
-	else if ((std::string::npos != origpath.find("steam_api64.dll")) && steamAPI64_P)
-	{
-		PrintLog("Detected reading steam_api64.dll at CreateFileA, replacing...");
-		int bufferSize = WideCharToMultiByte(CP_UTF8, 0, steamAPI64_Path, -1, NULL, 0, NULL, NULL);
-		LPSTR ansiString = new char[bufferSize];
-		WideCharToMultiByte(CP_UTF8, 0, steamAPI64_Path, -1, ansiString, bufferSize, NULL, NULL);
-		newFileName = ansiString;
-	}
-	else
-	{
-		newFileName = lpFileName;
-	}
+	std::string newFileNamestring = GetReplacedPath(origpath);
+	LPCSTR newFileName = newFileNamestring.c_str();
 
 	return OrigCreateFileA(newFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
@@ -99,31 +171,16 @@ HANDLE WINAPI CreateFileWHook(
 	DWORD dwFlagsAndAttributes,
 	HANDLE hTemplateFile)
 {
-	LPCWSTR newFileName;
-
 	size_t len = wcslen(lpFileName) + 1;
 	size_t convertedChars = 0;
 	char* mbstr = new char[len];
 	wcstombs_s(&convertedChars, mbstr, len, lpFileName, len - 1);
 	std::string origpath = std::string(mbstr);
-	delete[] mbstr;
-	std::transform(origpath.begin(), origpath.end(), origpath.begin(), tolower);
-	if ((std::string::npos != origpath.find("steam_api.dll")) && steamAPI_P)
-	{
-		PrintLog("Detected reading steam_api.dll at CreateFileW, replacing...");
-		newFileName = steamAPI_Path;
-	}
-	else if ((std::string::npos != origpath.find("steam_api64.dll")) && steamAPI64_P)
-	{
-		PrintLog("Detected reading steam_api64.dll at CreateFileW, replacing...");
-		newFileName = steamAPI64_Path;
-	}
-	else
-	{
-		newFileName = lpFileName;
-	}
+	std::string newFileName = GetReplacedPath(origpath);
+	std::wstring newFileNamestring = std::wstring(newFileName.begin(), newFileName.end());
+	LPCWSTR newFileNameLPC=newFileNamestring.c_str();
 
-	return OrigCreateFileW(newFileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+	return OrigCreateFileW(newFileNameLPC, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
 }
 
 
@@ -154,16 +211,73 @@ void LoadHook()
 		PrintLog("CreateFileW Hook Failed.");
 }
 
-bool isFileExist(const wchar_t* fileName) {
-	HANDLE hFile = CreateFileW(fileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile != INVALID_HANDLE_VALUE) {
-		CloseHandle(hFile);
-		return true;
-	}
-	return false;
+LPCWSTR ConvertToLPCWSTR(const char* charString) {
+	int size = MultiByteToWideChar(CP_UTF8, 0, charString, -1, nullptr, 0);
+	wchar_t* buffer = new wchar_t[size];
+	MultiByteToWideChar(CP_UTF8, 0, charString, -1, buffer, size);
+	return buffer;
 }
 
-void Checkfile()
+LPWSTR ConvertToLPWSTR(const char* charString) {
+	int size = MultiByteToWideChar(CP_UTF8, 0, charString, -1, nullptr, 0);
+	wchar_t* buffer = new wchar_t[size];
+	MultiByteToWideChar(CP_UTF8, 0, charString, -1, buffer, size);
+	return buffer;
+}
+
+bool readReplacesFromIni(const std::string& filename, std::vector<Replace>& replaceList) {
+	std::ifstream iniFile(filename);
+	std::string line;
+	std::map<std::string, std::string> replaceMap;
+	std::map<std::string, bool> afterFirstTimeMap;
+	if (!iniFile.is_open()) {
+		PrintLog("Unable to open ini file.");
+		return false;
+	}
+
+	
+	while (std::getline(iniFile, line) && line != "[AfterFirstTime]") {
+		if (line[0] == '[') continue; 
+		std::istringstream is_line(line);
+		std::string key;
+		if (std::getline(is_line, key, '=')) {
+			std::string value;
+			if (std::getline(is_line, value)) {
+				replaceMap[key] = value;
+			}
+		}
+	}
+
+	while (std::getline(iniFile, line)) {
+		if (line[0] == '[') continue;
+		std::istringstream is_line(line);
+		std::string key;
+		if (std::getline(is_line, key, '=')) {
+			std::string value;
+			if (std::getline(is_line, value)) {
+				if (value == "1")
+				{
+					afterFirstTimeMap[key] = true;
+				}
+				else afterFirstTimeMap[key] = false;
+			}
+		}
+	}
+
+
+	for (const auto& entry : replaceMap) {
+		Replace replace;
+		replace.origname = entry.first;
+		replace.replacename = entry.second;
+		replace.replaceafterfirsttime = afterFirstTimeMap[entry.first];
+		replaceList.push_back(replace);
+	}
+
+	iniFile.close();
+	return true;
+}
+
+void Checkfile(std::vector<Replace>& replaceList)
 {
 	PrintLog("Checking Original Steam_API(64) files...");
 
@@ -212,44 +326,67 @@ void Checkfile()
 	if (SteamAPI_BAK)
 	{
 		PrintLog("Found steam_api.dll.bak.");
-		steamAPI_P = true;
-		wcscpy_s(steamAPI_Path, MAX_PATH, steamAPI_BAK);
-	}
-
-	if (SteamAPI_ORG)
+		replaceList.push_back({ "steam_api.dll","steam_api.dll.bak",false });
+	}else if (SteamAPI_ORG)
 	{
 		PrintLog("Found steam_api.org.");
-		steamAPI_P = true;
-		wcscpy_s(steamAPI_Path, MAX_PATH, steamAPI_ORG);
-	}
-
-	if (SteamAPI_O)
+		replaceList.push_back({ "steam_api.dll","steam_api.org",false });
+	}else if (SteamAPI_O)
 	{
 		PrintLog("Found steam_api_o.dll.");
-		steamAPI_P = true;
-		wcscpy_s(steamAPI_Path, MAX_PATH, steamAPI_O);
+		replaceList.push_back({ "steam_api.dll","steam_api_o.dll",false });
 	}
 
 	if (SteamAPI64_BAK)
 	{
 		PrintLog("Found steam_api64.dll.bak.");
-		steamAPI64_P = true;
-		wcscpy_s(steamAPI64_Path, MAX_PATH, steamAPI64_BAK);
-	}
-
-	if (SteamAPI64_ORG)
+		replaceList.push_back({ "steam_api.dll","steam_api64.dll.bak",false });
+	}else if (SteamAPI64_ORG)
 	{
 		PrintLog("Found steam_api64.org.");
-		steamAPI64_P = true;
-		wcscpy_s(steamAPI64_Path, MAX_PATH, steamAPI64_ORG);
-	}
-
-	if (SteamAPI64_O)
+		replaceList.push_back({ "steam_api.dll","steam_api64.org",false });
+	}else if (SteamAPI64_O)
 	{
 		PrintLog("Found steam_api64_o.dll.");
-		steamAPI_P = true;
-		wcscpy_s(steamAPI_Path, MAX_PATH, steamAPI64_O);
+		replaceList.push_back({ "steam_api.dll","steam_api64_o.dll",false });
 	}
+}
+
+void GetReplaceList()
+{
+	wchar_t iniPath[MAX_PATH];
+	wcscpy_s(iniPath, MAX_PATH, GetCurrentPath());
+	wcscat_s(iniPath, MAX_PATH, L"\\SteamAPICheckBypass.ini");
+
+	if(useinternallist)
+	{
+		replaceList = internalreplaceList;
+	}
+
+	if(readReplacesFromIni(convertWCharToString(iniPath), replaceList))
+	{
+		PrintLog("Successfully get ini replace infos.");
+	}
+	else
+	{
+		PrintLog("Failed to get ini replace infos, detecting files...");
+		Checkfile(replaceList);
+	}
+	PrintLog("-----------------");
+	PrintLog("Replace List:");
+	{
+		for (const auto& replace : replaceList) {
+			PrintLog(replace.origname + "," + replace.replacename);
+		}
+	}
+	PrintLog("-----------------");
+}
+
+void Init()
+{
+	PrintLog("SteamAPICheckBypass Init");
+	GetReplaceList();
+	LoadHook();
 }
 
 BOOL APIENTRY DllMain(HMODULE hModule,
@@ -257,7 +394,6 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 	LPVOID lpReserved
 )
 {
-	LONG Error;
 	switch (ul_reason_for_call)
 	{
 	case DLL_PROCESS_ATTACH:
@@ -267,8 +403,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 #endif
 
 		PrintLog("Steam API Check Bypass dll Loaded.");
-		Checkfile();
-		LoadHook();
+		Init();
 
 	case DLL_PROCESS_DETACH:
 	case DLL_THREAD_ATTACH:
