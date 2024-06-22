@@ -31,7 +31,7 @@ bool useinternallist = false;   //Use built-in replace list without reading .ini
 
 bool debugprintpath = false;    //Print the path of the file being read
 
-bool enabledebuglogfile = true;      //Enable debug log file
+bool enabledebuglogfile = false;      //Enable debug log file
 
 std::string logfilename = "SteamAPICheckBypass.log"; //Log file name
 
@@ -63,12 +63,12 @@ void PrintLog(std::string str)
 	Console::Print(logstr.c_str());
 	if (enabledebuglogfile)
 	{
-	std::ofstream logfile;
-	logfile.open(logfilename, std::ios_base::app);
-	logfile << logstr;
+		std::ofstream logfile;
+		logfile.open(logfilename, std::ios_base::app);
+		logfile << logstr;
 	}
 #endif
-int wideStrLength = MultiByteToWideChar(CP_UTF8, 0, logstr.c_str(), -1, nullptr, 0);
+	int wideStrLength = MultiByteToWideChar(CP_UTF8, 0, logstr.c_str(), -1, nullptr, 0);
 	wchar_t* wideString = new wchar_t[wideStrLength];
 	MultiByteToWideChar(CP_UTF8, 0, logstr.c_str(), -1, wideString, wideStrLength);
 	OutputDebugString(wideString);
@@ -164,7 +164,7 @@ std::wstring GetReplacedPath(std::wstring path)
 	{
 		if (filename.find(replace.origname) != std::wstring::npos)
 		{
-			
+
 			replace.firstime = true;
 
 			if (replace.replaceafterfirsttime && !replace.firstime)
@@ -178,7 +178,7 @@ std::wstring GetReplacedPath(std::wstring path)
 			path = path.substr(0, pos + 1) + replace.replacename;
 			PrintLog("Replaced Path:" + utf16ToUtf8(path));
 			// Set firstime to true if replaceafterfirsttime is true and firstime is false
-			
+
 
 			break; // No need to check further once a replacement is made
 		}
@@ -200,27 +200,35 @@ NTSTATUS WINAPI NtCreateFileHook(
 	PVOID EaBuffer,
 	ULONG EaLength)
 {
-	if (ObjectAttributes != nullptr && ObjectAttributes->ObjectName &&
-		ObjectAttributes->ObjectName->Length &&
-		ObjectAttributes->ObjectName->Buffer != nullptr && !IsBadReadPtr(ObjectAttributes->ObjectName->Buffer, sizeof(WCHAR)) && ObjectAttributes->ObjectName->Buffer[0]) {
-		std::wstring originalPath(ObjectAttributes->ObjectName->Buffer, ObjectAttributes->ObjectName->Length / sizeof(WCHAR));
-		std::wstring replacedPathStr = GetReplacedPath(originalPath);
-		UNICODE_STRING replacedPathUnicode;
-		RtlInitUnicodeString(&replacedPathUnicode, replacedPathStr.c_str());
-		ObjectAttributes->ObjectName = &replacedPathUnicode;
-		return oNtCreateFile(
-			FileHandle,
-			DesiredAccess,
-			ObjectAttributes,
-			IoStatusBlock,
-			AllocationSize,
-			FileAttributes,
-			ShareAccess,
-			CreateDisposition,
-			CreateOptions,
-			EaBuffer,
-			EaLength);
+	try
+	{
+		if (ObjectAttributes != nullptr && ObjectAttributes->ObjectName &&
+			ObjectAttributes->ObjectName->Length &&
+			ObjectAttributes->ObjectName->Buffer != nullptr && !IsBadReadPtr(ObjectAttributes->ObjectName->Buffer, sizeof(WCHAR)) && ObjectAttributes->ObjectName->Buffer[0]) {
+			std::wstring originalPath(ObjectAttributes->ObjectName->Buffer, ObjectAttributes->ObjectName->Length / sizeof(WCHAR));
+			std::wstring replacedPathStr = GetReplacedPath(originalPath);
+			UNICODE_STRING replacedPathUnicode;
+			RtlInitUnicodeString(&replacedPathUnicode, replacedPathStr.c_str());
+			ObjectAttributes->ObjectName = &replacedPathUnicode;
+			return oNtCreateFile(
+				FileHandle,
+				DesiredAccess,
+				ObjectAttributes,
+				IoStatusBlock,
+				AllocationSize,
+				FileAttributes,
+				ShareAccess,
+				CreateDisposition,
+				CreateOptions,
+				EaBuffer,
+				EaLength);
+		}
 	}
+	catch (...)
+	{
+		PrintLog("Error in NtCreateFileHook");
+	}
+
 	return oNtCreateFile(
 		FileHandle,
 		DesiredAccess,
@@ -236,36 +244,44 @@ NTSTATUS WINAPI NtCreateFileHook(
 }
 
 NTSTATUS WINAPI NtOpenFileHook(
-    PHANDLE            FileHandle,
-    ACCESS_MASK        DesiredAccess,
-    POBJECT_ATTRIBUTES ObjectAttributes,
-    PIO_STATUS_BLOCK   IoStatusBlock,
-    ULONG              ShareAccess,
-    ULONG              OpenOptions)
+	PHANDLE            FileHandle,
+	ACCESS_MASK        DesiredAccess,
+	POBJECT_ATTRIBUTES ObjectAttributes,
+	PIO_STATUS_BLOCK   IoStatusBlock,
+	ULONG              ShareAccess,
+	ULONG              OpenOptions)
 {
-	if (ObjectAttributes != nullptr && ObjectAttributes->ObjectName &&
-        ObjectAttributes->ObjectName->Length &&
-        ObjectAttributes->ObjectName->Buffer != nullptr && !IsBadReadPtr(ObjectAttributes->ObjectName->Buffer, sizeof(WCHAR)) && ObjectAttributes->ObjectName->Buffer[0]) {
-        std::wstring originalPath(ObjectAttributes->ObjectName->Buffer, ObjectAttributes->ObjectName->Length / sizeof(WCHAR));
-        std::wstring replacedPathStr = GetReplacedPath(originalPath);
-        UNICODE_STRING replacedPathUnicode;
-        RtlInitUnicodeString(&replacedPathUnicode, replacedPathStr.c_str());
-        ObjectAttributes->ObjectName = &replacedPathUnicode;
-        return oNtOpenFile(
-            FileHandle,
-            DesiredAccess,
-            ObjectAttributes,
-            IoStatusBlock,
-            ShareAccess,
-            OpenOptions);
-    }
-    return oNtOpenFile(
-        FileHandle,
-        DesiredAccess,
-        ObjectAttributes,
-        IoStatusBlock,
-        ShareAccess,
-        OpenOptions);
+	try
+	{
+		if (ObjectAttributes != nullptr && ObjectAttributes->ObjectName &&
+			ObjectAttributes->ObjectName->Length &&
+			ObjectAttributes->ObjectName->Buffer != nullptr && !IsBadReadPtr(ObjectAttributes->ObjectName->Buffer, sizeof(WCHAR)) && ObjectAttributes->ObjectName->Buffer[0]) {
+			std::wstring originalPath(ObjectAttributes->ObjectName->Buffer, ObjectAttributes->ObjectName->Length / sizeof(WCHAR));
+			std::wstring replacedPathStr = GetReplacedPath(originalPath);
+			UNICODE_STRING replacedPathUnicode;
+			RtlInitUnicodeString(&replacedPathUnicode, replacedPathStr.c_str());
+			ObjectAttributes->ObjectName = &replacedPathUnicode;
+			return oNtOpenFile(
+				FileHandle,
+				DesiredAccess,
+				ObjectAttributes,
+				IoStatusBlock,
+				ShareAccess,
+				OpenOptions);
+		}
+	}
+	catch (...)
+	{
+		PrintLog("Error in NtOpenFileHook");
+	}
+
+	return oNtOpenFile(
+		FileHandle,
+		DesiredAccess,
+		ObjectAttributes,
+		IoStatusBlock,
+		ShareAccess,
+		OpenOptions);
 }
 
 void LoadHook()
@@ -282,10 +298,10 @@ void LoadHook()
 		if (oNtCreateFile)
 		{
 			DetourAttach(&(PVOID&)oNtCreateFile, NtCreateFileHook);
-	auto Error = DetourTransactionCommit();
-	if (Error == NO_ERROR)
+			auto Error = DetourTransactionCommit();
+			if (Error == NO_ERROR)
 				PrintLog("Hooked NtCreateFile");
-	else
+			else
 				PrintLog("NtCreateFile Hook Failed. Error: " + std::to_string(Error));
 		}
 		else
@@ -293,7 +309,7 @@ void LoadHook()
 			PrintLog("NtCreateFile Hook Failed. Error: Failed to get NtCreateFile address.");
 		}
 	}
-	
+
 	DetourTransactionBegin();
 	DetourUpdateThread(GetCurrentThread());
 
@@ -304,9 +320,9 @@ void LoadHook()
 		{
 			DetourAttach(&(PVOID&)oNtOpenFile, NtOpenFileHook);
 			auto Error = DetourTransactionCommit();
-	if (Error == NO_ERROR)
+			if (Error == NO_ERROR)
 				PrintLog("Hooked NtOpenFile");
-	else
+			else
 				PrintLog("NtOpenFile Hook Failed. Error: " + std::to_string(Error));
 		}
 		else
@@ -326,9 +342,9 @@ bool readReplacesFromIni(const std::wstring& filename, std::vector<Replace>& rep
 		return false;
 	}
 
-	
+
 	while (std::getline(iniFile, line) && line != "[AfterFirstTime]") {
-		if (line[0] == '[') continue; 
+		if (line[0] == '[') continue;
 		std::istringstream is_line(line);
 		std::string key;
 		if (std::getline(is_line, key, '=')) {
@@ -418,11 +434,13 @@ void Checkfile(std::vector<Replace>& replaceList)
 	{
 		PrintLog("Found steam_api.dll.bak.");
 		replaceList.push_back({ L"steam_api.dll",L"steam_api.dll.bak",false });
-	}else if (SteamAPI_ORG)
+	}
+	else if (SteamAPI_ORG)
 	{
 		PrintLog("Found steam_api.org.");
 		replaceList.push_back({ L"steam_api.dll",L"steam_api.org",false });
-	}else if (SteamAPI_O)
+	}
+	else if (SteamAPI_O)
 	{
 		PrintLog("Found steam_api_o.dll.");
 		replaceList.push_back({ L"steam_api.dll",L"steam_api_o.dll",false });
@@ -432,11 +450,13 @@ void Checkfile(std::vector<Replace>& replaceList)
 	{
 		PrintLog("Found steam_api64.dll.bak.");
 		replaceList.push_back({ L"steam_api.dll",L"steam_api64.dll.bak",false });
-	}else if (SteamAPI64_ORG)
+	}
+	else if (SteamAPI64_ORG)
 	{
 		PrintLog("Found steam_api64.org.");
 		replaceList.push_back({ L"steam_api.dll",L"steam_api64.org",false });
-	}else if (SteamAPI64_O)
+	}
+	else if (SteamAPI64_O)
 	{
 		PrintLog("Found steam_api64_o.dll.");
 		replaceList.push_back({ L"steam_api.dll",L"steam_api64_o.dll",false });
@@ -449,12 +469,12 @@ void GetReplaceList()
 	wcscpy_s(iniPath, MAX_PATH, GetCurrentPath());
 	wcscat_s(iniPath, MAX_PATH, inifilename.c_str());
 
-	if(useinternallist)
+	if (useinternallist)
 	{
 		replaceList = internalreplaceList;
 	}
 
-	if(readReplacesFromIni(iniPath, replaceList))
+	if (readReplacesFromIni(iniPath, replaceList))
 	{
 		PrintLog("Successfully get ini replace infos.");
 	}
@@ -489,7 +509,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
 )
 {
 #ifdef _DEBUG
-		Console::Attach();
+	Console::Attach();
 #endif
 
 	switch (ul_reason_for_call)
