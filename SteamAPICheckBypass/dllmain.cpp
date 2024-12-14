@@ -1,528 +1,126 @@
-﻿#include "pch.h"
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
-#include <codecvt>
+#include "lib_main/lib_main.hpp"
+#include "Helpers/Helpers.hpp"
+#include "Configs/Configs.hpp"
 
-#include "Console.h"
-#include "detours.h"
-#include <fstream>
-#include <intrin.h>
-#include <iostream>
-#include <map>
-#include <sstream>
+#include <filesystem>
 #include <string>
-#include <thread>
-#include <vector>
-#include <winternl.h>
 
-#pragma comment(lib, "detours.lib")
-#pragma comment(lib, "ntdll.lib")
-
-struct Replace
-{
-	std::wstring origname;
-	std::wstring replacename;
-	bool replaceafterfirsttime;    // Replace reading request after reading for first time
-	bool firstime = false;        // first time read indicator, should always be false
-};
-
-//----------Configuration start---------------
-
-bool useinternallist = false;   //Use built-in replace list without reading .ini file
-
-bool debugprintpath = false;    //Print the path of the file being read
-
-bool enabledebuglogfile = false;      //Enable debug log file
-
-std::string logfilename = "SteamAPICheckBypass.log"; //Log file name
-
-std::wstring inifilename = L"\\SteamAPICheckBypass.ini"; //Ini file name
-
-std::vector<Replace> internalreplaceList = {
-		{L"steam_api.dll", L"steam_api.org", false, false},
-		{L"steam_api64.dll", L"steam_api64.org", false, false},
-};//internal replace list example
-
-//----------Configuration end-----------------
-
-
-#pragma region Utils
-bool isFileExist(const wchar_t* fileName) {
-	HANDLE hFile = CreateFileW(fileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-	if (hFile != INVALID_HANDLE_VALUE) {
-		CloseHandle(hFile);
-		return true;
-	}
-	return false;
-}
-
-
-void PrintLog(std::string str)
-{
-	std::string logstr = "[SteamAPICheckBypass] " + str + "\n";
-#ifdef _DEBUG
-	Console::Print(logstr.c_str());
-	if (enabledebuglogfile)
-	{
-		std::ofstream logfile;
-		logfile.open(logfilename, std::ios_base::app);
-		logfile << logstr;
-	}
-#endif
-	int wideStrLength = MultiByteToWideChar(CP_UTF8, 0, logstr.c_str(), -1, nullptr, 0);
-	wchar_t* wideString = new wchar_t[wideStrLength];
-	MultiByteToWideChar(CP_UTF8, 0, logstr.c_str(), -1, wideString, wideStrLength);
-	OutputDebugString(wideString);
-	delete[] wideString;
-}
-
-wchar_t const* GetCurrentPath()
-{
-	wchar_t exePath[MAX_PATH];
-	GetModuleFileNameW(NULL, exePath, MAX_PATH);
-	wchar_t* lastBackslash = wcsrchr(exePath, L'\\');
-	if (lastBackslash != nullptr) {
-		*lastBackslash = L'\0';  // Null-terminate to get the directory path
-	}
-	return exePath;
-}
-
-std::wstring utf8ToUtf16(const std::string& utf8Str)
-{
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-	return conv.from_bytes(utf8Str);
-}
-
-std::string utf16ToUtf8(const std::wstring& utf16Str)
-{
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> conv;
-	return conv.to_bytes(utf16Str);
-}
-
-typedef enum _SECTION_INFORMATION_CLASS {
-	SectionBasicInformation,
-	SectionImageInformation
-} SECTION_INFORMATION_CLASS, * PSECTION_INFORMATION_CLASS;
-EXTERN_C NTSTATUS __stdcall NtQuerySection(HANDLE SectionHandle, SECTION_INFORMATION_CLASS InformationClass, PVOID InformationBuffer, ULONG InformationBufferSize, PULONG ResultLength);
-EXTERN_C NTSTATUS __stdcall NtProtectVirtualMemory(HANDLE ProcessHandle, PVOID* BaseAddress, PULONG  NumberOfBytesToProtect, ULONG NewAccessProtection, PULONG OldAccessProtection);
-EXTERN_C NTSTATUS __stdcall NtPulseEvent(HANDLE EventHandle, PULONG PreviousState);
-
-void DisableVMP()
-{
-	// restore hook at NtProtectVirtualMemory
-	auto ntdll = GetModuleHandleA("ntdll.dll");
-	if (ntdll == NULL) return;
-
-	bool linux = GetProcAddress(ntdll, "wine_get_version") != nullptr;
-	void* routine = linux ? (void*)NtPulseEvent : (void*)NtQuerySection;
-	DWORD old;
-	VirtualProtect(NtProtectVirtualMemory, 1, PAGE_EXECUTE_READWRITE, &old);
-	*(uintptr_t*)NtProtectVirtualMemory = *(uintptr_t*)routine & ~(0xFFui64 << 32) | (uintptr_t)(*(uint32_t*)((uintptr_t)routine + 4) - 1) << 32;
-	VirtualProtect(NtProtectVirtualMemory, 1, old, &old);
-}
+#pragma region Forward functions to system version.dll
+#pragma comment(linker, "/EXPORT:GetFileVersionInfoA=c:\\windows\\system32\\version.GetFileVersionInfoA")
+#pragma comment(linker, "/EXPORT:GetFileVersionInfoByHandle=c:\\windows\\system32\\version.GetFileVersionInfoByHandle")
+#pragma comment(linker, "/EXPORT:GetFileVersionInfoExA=c:\\windows\\system32\\version.GetFileVersionInfoExA")
+#pragma comment(linker, "/EXPORT:GetFileVersionInfoExW=c:\\windows\\system32\\version.GetFileVersionInfoExW")
+#pragma comment(linker, "/EXPORT:GetFileVersionInfoSizeA=c:\\windows\\system32\\version.GetFileVersionInfoSizeA")
+#pragma comment(linker, "/EXPORT:GetFileVersionInfoSizeExA=c:\\windows\\system32\\version.GetFileVersionInfoSizeExA")
+#pragma comment(linker, "/EXPORT:GetFileVersionInfoSizeExW=c:\\windows\\system32\\version.GetFileVersionInfoSizeExW")
+#pragma comment(linker, "/EXPORT:GetFileVersionInfoSizeW=c:\\windows\\system32\\version.GetFileVersionInfoSizeW")
+#pragma comment(linker, "/EXPORT:GetFileVersionInfoW=c:\\windows\\system32\\version.GetFileVersionInfoW")
+#pragma comment(linker, "/EXPORT:VerFindFileA=c:\\windows\\system32\\version.VerFindFileA")
+#pragma comment(linker, "/EXPORT:VerFindFileW=c:\\windows\\system32\\version.VerFindFileW")
+#pragma comment(linker, "/EXPORT:VerInstallFileA=c:\\windows\\system32\\version.VerInstallFileA")
+#pragma comment(linker, "/EXPORT:VerInstallFileW=c:\\windows\\system32\\version.VerInstallFileW")
+#pragma comment(linker, "/EXPORT:VerLanguageNameA=c:\\windows\\system32\\version.VerLanguageNameA")
+#pragma comment(linker, "/EXPORT:VerLanguageNameW=c:\\windows\\system32\\version.VerLanguageNameW")
+#pragma comment(linker, "/EXPORT:VerQueryValueA=c:\\windows\\system32\\version.VerQueryValueA")
+#pragma comment(linker, "/EXPORT:VerQueryValueW=c:\\windows\\system32\\version.VerQueryValueW")
 #pragma endregion
 
-std::vector<Replace> replaceList;
+std::vector<std::wstring> initial_files = {
+    // the current name of the dll is added here as a first entry
+    L"steamapicheckbypass.json",
+    L"steamapicheckbypass_config.json",
+    L"SteamAPICheckBypass.json",
+    L"SteamAPICheckBypass_congig.json",
+    L"nt_file_dupe.json",
+    L"nt_file_dupe_config.json",
+    L"nt_fs_dupe.json",
+    L"nt_fs_dupe_config.json",
+    L"nt_dupe.json",
+    L"nt_dupe_config.json",
+};
 
-typedef NTSTATUS(WINAPI* pNtCreateFile)(
-	PHANDLE FileHandle,
-	ACCESS_MASK DesiredAccess,
-	POBJECT_ATTRIBUTES ObjectAttributes,
-	PIO_STATUS_BLOCK IoStatusBlock,
-	PLARGE_INTEGER AllocationSize,
-	ULONG FileAttributes,
-	ULONG ShareAccess,
-	ULONG CreateDisposition,
-	ULONG CreateOptions,
-	PVOID EaBuffer,
-	ULONG EaLength);
+void add_original_entries(const std::wstring& original_path) {
+    std::wstring _original_path = ntfsdupe::helpers::to_absolute(original_path, ntfsdupe::cfgs::get_exe_dir());
+    std::filesystem::path path(_original_path);
+    std::wstring extension = path.extension().wstring();
+    std::wstring stem = path.stem().wstring();
+    std::wstring parent_path = path.parent_path().wstring();
 
-pNtCreateFile oNtCreateFile = nullptr;
-
-typedef NTSTATUS(WINAPI* pNtOpenFile)(
-	PHANDLE            FileHandle,
-	ACCESS_MASK        DesiredAccess,
-	POBJECT_ATTRIBUTES ObjectAttributes,
-	PIO_STATUS_BLOCK   IoStatusBlock,
-	ULONG              ShareAccess,
-	ULONG              OpenOptions);
-
-pNtOpenFile oNtOpenFile = nullptr;
-
-std::wstring GetReplacedPath(std::wstring path)
-{
-	// Get the file name from the path
-	size_t lastSlash = path.find_last_of('/');
-	size_t lastBackslash = path.find_last_of('\\');
-	size_t lastSeparator = (lastSlash > lastBackslash) ? lastSlash : lastBackslash;
-	std::wstring filename = path.substr(lastSeparator + 1);
-	if (filename.find(utf8ToUtf16(logfilename)) == std::string::npos && debugprintpath)
-	{
-		PrintLog("Reading Path:" + utf16ToUtf8(path));
-	}
-	// Check if the file name matches any entry in the replaceList
-	for (Replace& replace : replaceList)
-	{
-		if (filename.find(replace.origname) != std::wstring::npos)
-		{
-
-			replace.firstime = true;
-
-			if (replace.replaceafterfirsttime && !replace.firstime)
-			{
-				PrintLog("Reading " + utf16ToUtf8(replace.origname) + "for first time.");
-				break;
-			}
-			PrintLog("Reading " + utf16ToUtf8(replace.origname) + ",Replacing...");
-			// Replace the path's filename with replacename
-			size_t pos = path.find_last_of(L"/\\");
-			path = path.substr(0, pos + 1) + replace.replacename;
-			PrintLog("Replaced Path:" + utf16ToUtf8(path));
-			// Set firstime to true if replaceafterfirsttime is true and firstime is false
-
-
-			break; // No need to check further once a replacement is made
-		}
-	}
-
-	return path;
+    ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::file_redirect, _original_path, parent_path + L"\\" + stem + extension + L".bak", true);
+    ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::file_redirect, _original_path, parent_path + L"\\" + stem + L".org", true);
+    ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::file_redirect, _original_path, parent_path + L"\\" + stem + L"_o" + extension, true);
 }
 
-NTSTATUS WINAPI NtCreateFileHook(
-	PHANDLE FileHandle,
-	ACCESS_MASK DesiredAccess,
-	POBJECT_ATTRIBUTES ObjectAttributes,
-	PIO_STATUS_BLOCK IoStatusBlock,
-	PLARGE_INTEGER AllocationSize,
-	ULONG FileAttributes,
-	ULONG ShareAccess,
-	ULONG CreateDisposition,
-	ULONG CreateOptions,
-	PVOID EaBuffer,
-	ULONG EaLength)
-{
-	try
-	{
-		if (ObjectAttributes != nullptr && ObjectAttributes->ObjectName &&
-			ObjectAttributes->ObjectName->Length &&
-			ObjectAttributes->ObjectName->Buffer != nullptr && !IsBadReadPtr(ObjectAttributes->ObjectName->Buffer, sizeof(WCHAR)) && ObjectAttributes->ObjectName->Buffer[0]) {
-			std::wstring originalPath(ObjectAttributes->ObjectName->Buffer, ObjectAttributes->ObjectName->Length / sizeof(WCHAR));
-			std::wstring replacedPathStr = GetReplacedPath(originalPath);
-			UNICODE_STRING replacedPathUnicode;
-			RtlInitUnicodeString(&replacedPathUnicode, replacedPathStr.c_str());
-			ObjectAttributes->ObjectName = &replacedPathUnicode;
-			return oNtCreateFile(
-				FileHandle,
-				DesiredAccess,
-				ObjectAttributes,
-				IoStatusBlock,
-				AllocationSize,
-				FileAttributes,
-				ShareAccess,
-				CreateDisposition,
-				CreateOptions,
-				EaBuffer,
-				EaLength);
-		}
-	}
-	catch (...)
-	{
-		PrintLog("Error in NtCreateFileHook");
-	}
-
-	return oNtCreateFile(
-		FileHandle,
-		DesiredAccess,
-		ObjectAttributes,
-		IoStatusBlock,
-		AllocationSize,
-		FileAttributes,
-		ShareAccess,
-		CreateDisposition,
-		CreateOptions,
-		EaBuffer,
-		EaLength);
-}
-
-NTSTATUS WINAPI NtOpenFileHook(
-	PHANDLE            FileHandle,
-	ACCESS_MASK        DesiredAccess,
-	POBJECT_ATTRIBUTES ObjectAttributes,
-	PIO_STATUS_BLOCK   IoStatusBlock,
-	ULONG              ShareAccess,
-	ULONG              OpenOptions)
-{
-	try
-	{
-		if (ObjectAttributes != nullptr && ObjectAttributes->ObjectName &&
-			ObjectAttributes->ObjectName->Length &&
-			ObjectAttributes->ObjectName->Buffer != nullptr && !IsBadReadPtr(ObjectAttributes->ObjectName->Buffer, sizeof(WCHAR)) && ObjectAttributes->ObjectName->Buffer[0]) {
-			std::wstring originalPath(ObjectAttributes->ObjectName->Buffer, ObjectAttributes->ObjectName->Length / sizeof(WCHAR));
-			std::wstring replacedPathStr = GetReplacedPath(originalPath);
-			UNICODE_STRING replacedPathUnicode;
-			RtlInitUnicodeString(&replacedPathUnicode, replacedPathStr.c_str());
-			ObjectAttributes->ObjectName = &replacedPathUnicode;
-			return oNtOpenFile(
-				FileHandle,
-				DesiredAccess,
-				ObjectAttributes,
-				IoStatusBlock,
-				ShareAccess,
-				OpenOptions);
-		}
-	}
-	catch (...)
-	{
-		PrintLog("Error in NtOpenFileHook");
-	}
-
-	return oNtOpenFile(
-		FileHandle,
-		DesiredAccess,
-		ObjectAttributes,
-		IoStatusBlock,
-		ShareAccess,
-		OpenOptions);
-}
-
-void LoadHook()
-{
-	PrintLog("Starting to hook File APIs...");
-	HMODULE hNtdll = GetModuleHandle(L"ntdll.dll");
-	DetourRestoreAfterWith();
-	DetourTransactionBegin();
-	DetourUpdateThread(GetCurrentThread());
-
-	if (hNtdll)
-	{
-		oNtCreateFile = (pNtCreateFile)GetProcAddress(hNtdll, "NtCreateFile");
-		if (oNtCreateFile)
-		{
-			DetourAttach(&(PVOID&)oNtCreateFile, NtCreateFileHook);
-			auto Error = DetourTransactionCommit();
-			if (Error == NO_ERROR)
-				PrintLog("Hooked NtCreateFile");
-			else
-				PrintLog("NtCreateFile Hook Failed. Error: " + std::to_string(Error));
-		}
-		else
-		{
-			PrintLog("NtCreateFile Hook Failed. Error: Failed to get NtCreateFile address.");
-		}
-	}
-
-	DetourTransactionBegin();
-	DetourUpdateThread(GetCurrentThread());
-
-	if (hNtdll)
-	{
-		oNtOpenFile = (pNtOpenFile)GetProcAddress(hNtdll, "NtOpenFile");
-		if (oNtOpenFile)
-		{
-			DetourAttach(&(PVOID&)oNtOpenFile, NtOpenFileHook);
-			auto Error = DetourTransactionCommit();
-			if (Error == NO_ERROR)
-				PrintLog("Hooked NtOpenFile");
-			else
-				PrintLog("NtOpenFile Hook Failed. Error: " + std::to_string(Error));
-		}
-		else
-		{
-			PrintLog("NtOpenFile Hook Failed. Error: Failed to get NtOpenFile address.");
-		}
-	}
-}
-
-bool readReplacesFromIni(const std::wstring& filename, std::vector<Replace>& replaceList) {
-	std::ifstream iniFile(filename);
-	std::string line;
-	std::map<std::string, std::string> replaceMap;
-	std::map<std::string, bool> afterFirstTimeMap;
-	if (!iniFile.is_open()) {
-		PrintLog("Unable to open ini file.");
-		return false;
-	}
-
-
-	while (std::getline(iniFile, line) && line != "[AfterFirstTime]") {
-		if (line[0] == '[') continue;
-		std::istringstream is_line(line);
-		std::string key;
-		if (std::getline(is_line, key, '=')) {
-			std::string value;
-			if (std::getline(is_line, value)) {
-				replaceMap[key] = value;
-			}
-		}
-	}
-
-	while (std::getline(iniFile, line)) {
-		if (line[0] == '[') continue;
-		std::istringstream is_line(line);
-		std::string key;
-		if (std::getline(is_line, key, '=')) {
-			std::string value;
-			if (std::getline(is_line, value)) {
-				if (value == "1")
-				{
-					afterFirstTimeMap[key] = true;
-				}
-				else afterFirstTimeMap[key] = false;
-			}
-		}
-	}
-
-
-	for (const auto& entry : replaceMap) {
-		Replace replace;
-		replace.origname = utf8ToUtf16(entry.first);
-		replace.replacename = utf8ToUtf16(entry.second);
-		replace.replaceafterfirsttime = afterFirstTimeMap[entry.first];
-		replaceList.push_back(replace);
-	}
-
-	iniFile.close();
-	return true;
-}
-
-void Checkfile(std::vector<Replace>& replaceList)
-{
-	PrintLog("Checking Original Steam_API(64) files...");
-
-	wchar_t exePath[MAX_PATH];
-	GetModuleFileNameW(NULL, exePath, MAX_PATH);
-
-	// Extract the directory from the full path
-	wchar_t* lastBackslash = wcsrchr(exePath, L'\\');
-	if (lastBackslash != nullptr) {
-		*lastBackslash = L'\0';  // Null-terminate to get the directory path
-	}
-
-	// Construct file paths based on the executable path
-	wchar_t steamAPI_ORG[MAX_PATH];
-	wcscpy_s(steamAPI_ORG, MAX_PATH, exePath);
-	wcscat_s(steamAPI_ORG, MAX_PATH, L"\\steam_api.org");
-
-	wchar_t steamAPI_BAK[MAX_PATH];
-	wcscpy_s(steamAPI_BAK, MAX_PATH, exePath);
-	wcscat_s(steamAPI_BAK, MAX_PATH, L"\\steam_api.dll.bak");
-
-	wchar_t steamAPI_O[MAX_PATH];
-	wcscpy_s(steamAPI_O, MAX_PATH, exePath);
-	wcscat_s(steamAPI_O, MAX_PATH, L"\\steam_api_o.dll");
-
-	wchar_t steamAPI64_ORG[MAX_PATH];
-	wcscpy_s(steamAPI64_ORG, MAX_PATH, exePath);
-	wcscat_s(steamAPI64_ORG, MAX_PATH, L"\\steam_api64.org");
-
-	wchar_t steamAPI64_BAK[MAX_PATH];
-	wcscpy_s(steamAPI64_BAK, MAX_PATH, exePath);
-	wcscat_s(steamAPI64_BAK, MAX_PATH, L"\\steam_api64.dll.bak");
-
-	wchar_t steamAPI64_O[MAX_PATH];
-	wcscpy_s(steamAPI64_O, MAX_PATH, exePath);
-	wcscat_s(steamAPI64_O, MAX_PATH, L"\\steam_api64_o.dll");
-
-
-	bool SteamAPI_ORG = isFileExist(steamAPI_ORG);
-	bool SteamAPI_BAK = isFileExist(steamAPI_BAK);
-	bool SteamAPI_O = isFileExist(steamAPI_O);
-	bool SteamAPI64_ORG = isFileExist(steamAPI64_ORG);
-	bool SteamAPI64_BAK = isFileExist(steamAPI64_BAK);
-	bool SteamAPI64_O = isFileExist(steamAPI64_O);
-
-	if (SteamAPI_BAK)
-	{
-		PrintLog("Found steam_api.dll.bak.");
-		replaceList.push_back({ L"steam_api.dll",L"steam_api.dll.bak",false });
-	}
-	else if (SteamAPI_ORG)
-	{
-		PrintLog("Found steam_api.org.");
-		replaceList.push_back({ L"steam_api.dll",L"steam_api.org",false });
-	}
-	else if (SteamAPI_O)
-	{
-		PrintLog("Found steam_api_o.dll.");
-		replaceList.push_back({ L"steam_api.dll",L"steam_api_o.dll",false });
-	}
-
-	if (SteamAPI64_BAK)
-	{
-		PrintLog("Found steam_api64.dll.bak.");
-		replaceList.push_back({ L"steam_api.dll",L"steam_api64.dll.bak",false });
-	}
-	else if (SteamAPI64_ORG)
-	{
-		PrintLog("Found steam_api64.org.");
-		replaceList.push_back({ L"steam_api.dll",L"steam_api64.org",false });
-	}
-	else if (SteamAPI64_O)
-	{
-		PrintLog("Found steam_api64_o.dll.");
-		replaceList.push_back({ L"steam_api.dll",L"steam_api64_o.dll",false });
-	}
-}
-
-void GetReplaceList()
-{
-	wchar_t iniPath[MAX_PATH];
-	wcscpy_s(iniPath, MAX_PATH, GetCurrentPath());
-	wcscat_s(iniPath, MAX_PATH, inifilename.c_str());
-
-	if (useinternallist)
-	{
-		replaceList = internalreplaceList;
-	}
-
-	if (readReplacesFromIni(iniPath, replaceList))
-	{
-		PrintLog("Successfully get ini replace infos.");
-	}
-	else
-	{
-		PrintLog("Failed to get ini replace infos, detecting files...");
-		Checkfile(replaceList);
-	}
-	PrintLog("-----------------");
-	PrintLog("Replace List:");
-	{
-		for (const auto& replace : replaceList) {
-			PrintLog(utf16ToUtf8(replace.origname) + "," + utf16ToUtf8(replace.replacename));
-		}
-	}
-	PrintLog("-----------------");
-}
-
-void Init()
-{
-	PrintLog("SteamAPICheckBypass Init");
-	GetReplaceList();
-	std::thread([]() {
-		DisableVMP();
-		LoadHook();
-		}).detach();
-}
-
-BOOL APIENTRY DllMain(HMODULE hModule,
-	DWORD  ul_reason_for_call,
-	LPVOID lpReserved
+BOOL APIENTRY DllMain(
+    HMODULE hModule,
+    DWORD  ul_reason_for_call,
+    LPVOID lpReserved
 )
 {
-#ifdef _DEBUG
-	Console::Attach();
-#endif
+    switch (ul_reason_for_call) {
+    case DLL_PROCESS_ATTACH: {
+        if (!ntfsdupe::init()) return FALSE;
 
-	switch (ul_reason_for_call)
-	{
-	case DLL_PROCESS_ATTACH:
-		PrintLog("Steam API Check Bypass dll Loaded.");
-		Init();
-	case DLL_PROCESS_DETACH:
-	case DLL_THREAD_ATTACH:
-	case DLL_THREAD_DETACH:
-		break;
-	}
-	return TRUE;
+        std::wstring my_path_str(ntfsdupe::helpers::get_module_fullpath(hModule));
+        if (my_path_str.empty()) return FALSE;
+
+        // hide ourself (on disk)
+        if (!ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::file_hide, my_path_str)) return FALSE;
+
+        auto my_path = std::filesystem::path(my_path_str);
+
+        // hide ourself (in memory)
+        //if (!ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::module_hide_handle, my_path.filename().wstring())) return FALSE;
+
+        std::wstring stem_lower = my_path.stem().wstring();
+        std::transform(stem_lower.begin(), stem_lower.end(), stem_lower.begin(), ::towlower);
+        if (stem_lower != L"version") {
+            if (!ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::module_hide_handle, stem_lower)) return FALSE;
+        }
+        
+        // add <dll name>.json to the list
+        initial_files.insert(initial_files.begin(), my_path.stem().wstring() + L".json");
+
+        // try to load some files by default
+        auto my_dir = my_path.parent_path();
+        bool found_cfg_file = false;
+        for (const auto &file : initial_files) {
+            auto cfg_file = (my_dir / file).wstring();
+            if (ntfsdupe::cfgs::load_file(cfg_file.c_str())) {
+                found_cfg_file = true;
+                // hiding this file isn't really critical, right?
+                ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::file_hide, cfg_file);
+                break;
+            }
+        }
+
+        if (!found_cfg_file)
+        {
+            // hide exe
+            add_original_entries(ntfsdupe::helpers::get_module_fullpath(nullptr));
+
+            // hide steam_api.dll
+            add_original_entries(L"steam_api.dll");
+
+            // hide steam_api64.dll
+            add_original_entries(L"steam_api64.dll");
+        }
+
+    }
+    break;
+
+    case DLL_THREAD_ATTACH:
+    case DLL_THREAD_DETACH:
+    break;
+
+    case DLL_PROCESS_DETACH:
+        ntfsdupe::deinit();
+    break;
+    }
+
+    return TRUE;
 }
 
-extern "C" __declspec(dllexport) void SteamAPICheckBypass() {};

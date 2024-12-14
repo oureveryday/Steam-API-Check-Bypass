@@ -1,0 +1,15 @@
+{
+    "steam_api64.dll":
+    {
+      "mode": "file_redirect",
+      "to": "steam_api64.dll.bak",
+      "hook_times_mode": "nth_time_only",
+      "hook_time_n": 1
+    },
+    "game.exe":
+    {
+        "mode": "file_redirect",
+        "to": "game.exe.bak"
+    }
+}
+  

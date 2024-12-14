@@ -8,43 +8,52 @@ Bypasses Steam API dll integrity/size check by hooking CreateFile API.
 
 ## Usage
 
+* If you are using x32 version please remove `x32` from dll name.
+
 ### Method 1
 
 * Use CFF Explorer and add `SteamAPICheckBypass` dll import to game main exe, then put the `SteamAPICheckBypass(x32).dll` dll beside game exe.
 
 ### Method 2 (VersionShim) (x64 for pre-built version.dll)
 
-* Put `SteamAPICheckBypass.dll` `version.dll` `libraries.txt` beside game exe.
+* Put `SteamAPICheckBypass.dll` `version.dll` beside game exe.
 
 ## Configuration (Optional)
 
-* Create `SteamAPICheckBypass.ini` and write file names you want to replace. Example:
+* Create `SteamAPICheckBypass.json` and write file names you want to replace. Example:
 
-```text
-[Replace]
-OriginalFileFile=ReplaceFileName
-steam_api64.dll=steam_api64.dll.bak
-steam_api.dll=steam_api.dll.bak
-
-[AfterFirstTime]
-OriginalFileFile=0
-steam_api.dll=0
+```json
+{
+    "steam_api64.dll":
+    {
+      "mode": "file_redirect",
+      "to": "steam_api64.dll.bak",
+      "hook_times_mode": "nth_time_only",
+      "hook_time_n": 1
+    },
+    "game.exe":
+    {
+        "mode": "file_redirect",
+        "to": "game.exe.bak"
+    }
+}
+  
 ```
 
-* `Replace`: The file name to replace.
-* `AfterFirstTime`: Start to replace after the first read of the file.
+* `mode`: `file_redirect` or `file_hide`.
+* `to` : The target file relative path.
+* `hook_times_mode`: `all`, `nth_time_only` or `not_nth_time_only`.
+* `hook_time_n`: The nth time to hook / not hook. (Start from 1)
+* hook time option is useful for game dynamically loads steam_api dll after/before check.
 
 ## Internal Process
 
-1. The Crack will check `useinternallist` in the source code, if it's true, it will use `internalreplaceList`.
-
-2. The Crack will try to parse the ini file and add them into the replace list.
-
-3. If ini file not exist, try find `steam_api(64).dll.bak`, `steam_api(64).org`,`steam_api(64)_o.dll` and add the existed file into replace list.
+* Please refer to [nt_file_dupe Readme](nt_file_dupe/README.md) for more information.
 
 ## Dependencies
 
 * <https://github.com/Xpl0itR/VersionShim>
+* <https://github.com/otavepto/nt-fs-dupe>
 
 ## Bugs
 

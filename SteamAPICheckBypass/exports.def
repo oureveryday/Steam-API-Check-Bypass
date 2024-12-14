@@ -1,0 +1,5 @@
+LIBRARY nt_file_dupe
+EXPORTS
+	ntfsdupe_add_entry
+	ntfsdupe_load_file
+	ntfsdupe_deinit

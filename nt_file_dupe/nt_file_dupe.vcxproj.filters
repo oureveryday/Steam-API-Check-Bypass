@@ -1,0 +1,246 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Hooks">
+      <UniqueIdentifier>{5bc16b5c-bafc-4899-b5d4-0e2963b077b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Helpers">
+      <UniqueIdentifier>{8e3ccce4-f784-4a8b-9353-e9e8f04533f3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NtApis">
+      <UniqueIdentifier>{8a01e19e-dd42-47cd-9795-77a79964d956}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Configs">
+      <UniqueIdentifier>{8c8290fa-89b8-4d04-bf3c-c09522bdf129}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtCreateDirectoryObject_hook">
+      <UniqueIdentifier>{590454ba-fc14-4091-be17-1302646e1723}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtCreateFile_hook">
+      <UniqueIdentifier>{e8cee40f-4a11-46bd-9843-b4008c52e19e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtDeleteFile_hook">
+      <UniqueIdentifier>{9fb606f3-3e69-4ea3-bf2c-911572f14698}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtOpenDirectoryObject_hook">
+      <UniqueIdentifier>{a6969531-3a77-4332-8ec8-945df19a8d06}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtOpenFile_hook">
+      <UniqueIdentifier>{c2902eed-400a-4843-a432-29ae6d49ac53}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtQueryAttributesFile_hook">
+      <UniqueIdentifier>{87a6614f-7d69-41fe-adec-1cd8af3fe234}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtQueryDirectoryFile_hook">
+      <UniqueIdentifier>{755db213-8e29-4421-a4f4-88c37a16b2c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtQueryDirectoryFileEx_hook">
+      <UniqueIdentifier>{099ed076-9cdb-423f-8ba6-6d8aa754fafd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtQueryFullAttributesFile_hook">
+      <UniqueIdentifier>{7f7b144f-c07d-4a36-af70-9cb950de8643}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtQueryInformationByName_hook">
+      <UniqueIdentifier>{3136f89e-277d-410b-b58e-c55723bcc950}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtQueryInformationFile_hook">
+      <UniqueIdentifier>{ab07afcc-98b1-4fa1-9e41-173146a9b9c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\LdrLoadDll_hook">
+      <UniqueIdentifier>{bd3b3971-f874-4cad-97cb-8d1711b685a6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libs">
+      <UniqueIdentifier>{75cf0e8c-c7c6-4adc-a863-a08b0387c949}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libs\Detours">
+      <UniqueIdentifier>{e3fecc77-9d31-4e79-8425-b29fa30b516f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libs\Json">
+      <UniqueIdentifier>{b5b69105-3f0c-4b33-bf87-abfe034353fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="libs\Json\nlohmann">
+      <UniqueIdentifier>{ea3adc20-7aca-4960-853b-4069bca884e0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="lib_main">
+      <UniqueIdentifier>{d001949c-3fb8-4277-9bec-dd5950f9069d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\LdrGetDllHandle">
+      <UniqueIdentifier>{880696e8-c988-41e3-afcb-88fe2a5f46f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Hooks\NtCreateDirectoryObjectEx_hook">
+      <UniqueIdentifier>{681f8939-0f73-41f9-84c6-28a25d073362}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Hooks\Hooks.cpp">
+      <Filter>Hooks</Filter>
+    </ClCompile>
+    <ClCompile Include="src\NtApis\NtApis.cpp">
+      <Filter>NtApis</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Configs\Configs.cpp">
+      <Filter>Configs</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtCreateDirectoryObject_hook\NtCreateDirectoryObject_hook.cpp">
+      <Filter>Hooks\NtCreateDirectoryObject_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtCreateDirectoryObjectEx_hook\NtCreateDirectoryObjectEx_hook.cpp">
+      <Filter>Hooks\NtCreateDirectoryObjectEx_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtCreateFile_hook\NtCreateFile_hook.cpp">
+      <Filter>Hooks\NtCreateFile_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtDeleteFile_hook\NtDeleteFile_hook.cpp">
+      <Filter>Hooks\NtDeleteFile_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtOpenDirectoryObject_hook\NtOpenDirectoryObject_hook.cpp">
+      <Filter>Hooks\NtOpenDirectoryObject_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtOpenFile_hook\NtOpenFile_hook.cpp">
+      <Filter>Hooks\NtOpenFile_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtQueryAttributesFile_hook\NtQueryAttributesFile_hook.cpp">
+      <Filter>Hooks\NtQueryAttributesFile_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtQueryDirectoryFile_hook\NtQueryDirectoryFile_hook.cpp">
+      <Filter>Hooks\NtQueryDirectoryFile_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtQueryDirectoryFileEx_hook\NtQueryDirectoryFileEx_hook.cpp">
+      <Filter>Hooks\NtQueryDirectoryFileEx_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtQueryFullAttributesFile_hook\NtQueryFullAttributesFile_hook.cpp">
+      <Filter>Hooks\NtQueryFullAttributesFile_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtQueryInformationByName_hook\NtQueryInformationByName_hook.cpp">
+      <Filter>Hooks\NtQueryInformationByName_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\NtQueryInformationFile_hook\NtQueryInformationFile_hook.cpp">
+      <Filter>Hooks\NtQueryInformationFile_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\creatwth.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\detours.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\disasm.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\disolarm.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\disolarm64.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\disolia64.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\disolx64.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\disolx86.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\image.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\modules.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="libs\Detours\uimports.cpp">
+      <Filter>libs\Detours</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\LdrLoadDll_hook\LdrLoadDll_hook.cpp">
+      <Filter>Hooks\LdrLoadDll_hook</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Helpers\dbglog.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="src\lib_main\lib_main.cpp">
+      <Filter>lib_main</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Hooks\LdrGetDllHandle_hook\LdrGetDllHandle_hook.cpp">
+      <Filter>Hooks\LdrGetDllHandle</Filter>
+    </ClCompile>
+    <ClCompile Include="src\NtApis\peb_helper.cpp">
+      <Filter>NtApis</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="libs\Json\nlohmann\json.hpp">
+      <Filter>libs\Json\nlohmann</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Helpers\Helpers.hpp">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\Hooks.hpp">
+      <Filter>Hooks</Filter>
+    </ClInclude>
+    <ClInclude Include="include\NtApis\NtApis.hpp">
+      <Filter>NtApis</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Configs\Configs.hpp">
+      <Filter>Configs</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtCreateDirectoryObject_hook\NtCreateDirectoryObject_hook.hpp">
+      <Filter>Hooks\NtCreateDirectoryObject_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtCreateDirectoryObjectEx_hook\NtCreateDirectoryObjectEx_hook.hpp">
+      <Filter>Hooks\NtCreateDirectoryObjectEx_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtCreateFile_hook\NtCreateFile_hook.hpp">
+      <Filter>Hooks\NtCreateFile_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtDeleteFile_hook\NtDeleteFile_hook.hpp">
+      <Filter>Hooks\NtDeleteFile_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtOpenDirectoryObject_hook\NtOpenDirectoryObject_hook.hpp">
+      <Filter>Hooks\NtOpenDirectoryObject_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtOpenFile_hook\NtOpenFile_hook.hpp">
+      <Filter>Hooks\NtOpenFile_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtQueryAttributesFile_hook\NtQueryAttributesFile_hook.hpp">
+      <Filter>Hooks\NtQueryAttributesFile_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtQueryDirectoryFile_hook\NtQueryDirectoryFile_hook.hpp">
+      <Filter>Hooks\NtQueryDirectoryFile_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtQueryDirectoryFileEx_hook\NtQueryDirectoryFileEx_hook.hpp">
+      <Filter>Hooks\NtQueryDirectoryFileEx_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtQueryFullAttributesFile_hook\NtQueryFullAttributesFile_hook.hpp">
+      <Filter>Hooks\NtQueryFullAttributesFile_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtQueryInformationByName_hook\NtQueryInformationByName_hook.hpp">
+      <Filter>Hooks\NtQueryInformationByName_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\NtQueryInformationFile_hook\NtQueryInformationFile_hook.hpp">
+      <Filter>Hooks\NtQueryInformationFile_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\Json\nlohmann\json_fwd.hpp">
+      <Filter>libs\Json\nlohmann</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\Detours\detours.h">
+      <Filter>libs\Detours</Filter>
+    </ClInclude>
+    <ClInclude Include="libs\Detours\detver.h">
+      <Filter>libs\Detours</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\LdrLoadDll_hook\LdrLoadDll_hook.hpp">
+      <Filter>Hooks\LdrLoadDll_hook</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Helpers\dbglog.hpp">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="include\lib_main\lib_main.hpp">
+      <Filter>lib_main</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Hooks\LdrGetDllHandle_hook\LdrGetDllHandle_hook.hpp">
+      <Filter>Hooks\LdrGetDllHandle</Filter>
+    </ClInclude>
+    <ClInclude Include="include\NtApis\peb_helper.hpp">
+      <Filter>NtApis</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
