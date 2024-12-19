@@ -1,5 +1,22 @@
-LIBRARY nt_file_dupe
+LIBRARY SteamAPICheckBypass
 EXPORTS
+	GetFileVersionInfoA
+	GetFileVersionInfoByHandle
+	GetFileVersionInfoExA
+	GetFileVersionInfoExW
+	GetFileVersionInfoSizeA
+	GetFileVersionInfoSizeExA
+	GetFileVersionInfoSizeExW
+	GetFileVersionInfoSizeW
+	GetFileVersionInfoW
+	VerFindFileA
+	VerFindFileW
+	VerInstallFileA
+	VerInstallFileW
+	VerLanguageNameA
+	VerLanguageNameW
+	VerQueryValueA
+	VerQueryValueW
 	ntfsdupe_add_entry
 	ntfsdupe_load_file
 	ntfsdupe_deinit

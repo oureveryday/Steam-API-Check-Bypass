@@ -10,6 +10,7 @@
       <Filter>Interface</Filter>
     </ClCompile>
     <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="exports.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="exports.def" />
@@ -18,5 +19,9 @@
     <ClInclude Include="include\nt_file_dupe.hpp">
       <Filter>Interface</Filter>
     </ClInclude>
+    <ClInclude Include="exports.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="version.asm" />
   </ItemGroup>
 </Project>

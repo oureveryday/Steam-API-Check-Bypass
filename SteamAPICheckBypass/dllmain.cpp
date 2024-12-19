@@ -8,25 +8,7 @@
 #include <filesystem>
 #include <string>
 
-#pragma region Forward functions to system version.dll
-#pragma comment(linker, "/EXPORT:GetFileVersionInfoA=c:\\windows\\system32\\version.GetFileVersionInfoA")
-#pragma comment(linker, "/EXPORT:GetFileVersionInfoByHandle=c:\\windows\\system32\\version.GetFileVersionInfoByHandle")
-#pragma comment(linker, "/EXPORT:GetFileVersionInfoExA=c:\\windows\\system32\\version.GetFileVersionInfoExA")
-#pragma comment(linker, "/EXPORT:GetFileVersionInfoExW=c:\\windows\\system32\\version.GetFileVersionInfoExW")
-#pragma comment(linker, "/EXPORT:GetFileVersionInfoSizeA=c:\\windows\\system32\\version.GetFileVersionInfoSizeA")
-#pragma comment(linker, "/EXPORT:GetFileVersionInfoSizeExA=c:\\windows\\system32\\version.GetFileVersionInfoSizeExA")
-#pragma comment(linker, "/EXPORT:GetFileVersionInfoSizeExW=c:\\windows\\system32\\version.GetFileVersionInfoSizeExW")
-#pragma comment(linker, "/EXPORT:GetFileVersionInfoSizeW=c:\\windows\\system32\\version.GetFileVersionInfoSizeW")
-#pragma comment(linker, "/EXPORT:GetFileVersionInfoW=c:\\windows\\system32\\version.GetFileVersionInfoW")
-#pragma comment(linker, "/EXPORT:VerFindFileA=c:\\windows\\system32\\version.VerFindFileA")
-#pragma comment(linker, "/EXPORT:VerFindFileW=c:\\windows\\system32\\version.VerFindFileW")
-#pragma comment(linker, "/EXPORT:VerInstallFileA=c:\\windows\\system32\\version.VerInstallFileA")
-#pragma comment(linker, "/EXPORT:VerInstallFileW=c:\\windows\\system32\\version.VerInstallFileW")
-#pragma comment(linker, "/EXPORT:VerLanguageNameA=c:\\windows\\system32\\version.VerLanguageNameA")
-#pragma comment(linker, "/EXPORT:VerLanguageNameW=c:\\windows\\system32\\version.VerLanguageNameW")
-#pragma comment(linker, "/EXPORT:VerQueryValueA=c:\\windows\\system32\\version.VerQueryValueA")
-#pragma comment(linker, "/EXPORT:VerQueryValueW=c:\\windows\\system32\\version.VerQueryValueW")
-#pragma endregion
+#include "exports.h"
 
 std::vector<std::wstring> initial_files = {
     // the current name of the dll is added here as a first entry
@@ -71,6 +53,9 @@ BOOL APIENTRY DllMain(
         if (!ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::file_hide, my_path_str)) return FALSE;
 
         auto my_path = std::filesystem::path(my_path_str);
+
+        // trick to anti FreeLibrary
+        GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_PIN, my_path.filename().string().c_str(), &hModule);
 
         // hide ourself (in memory)
         //if (!ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::module_hide_handle, my_path.filename().wstring())) return FALSE;
@@ -124,3 +109,32 @@ BOOL APIENTRY DllMain(
     return TRUE;
 }
 
+bool TlsOnce = false;
+void __stdcall TlsCallback(PVOID hModule, DWORD fdwReason, PVOID pContext)
+{
+    if (!TlsOnce)
+    {
+        Load();
+    }
+}
+
+//linker spec
+#ifdef _M_IX86
+#pragma comment (linker, "/INCLUDE:__tls_used")
+#pragma comment (linker, "/INCLUDE:__tls_callback")
+#else
+#pragma comment (linker, "/INCLUDE:_tls_used")
+#pragma comment (linker, "/INCLUDE:_tls_callback")
+#endif
+EXTERN_C
+#ifdef _M_X64
+#pragma const_seg (".CRT$XLB")
+const
+#else
+#pragma data_seg (".CRT$XLB")
+#endif
+//end linker
+PIMAGE_TLS_CALLBACK _tls_callback = TlsCallback;
+
+#pragma data_seg ()
+#pragma const_seg ()
