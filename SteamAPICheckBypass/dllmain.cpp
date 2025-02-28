@@ -62,7 +62,7 @@ BOOL APIENTRY DllMain(
 
         std::wstring stem_lower = my_path.stem().wstring();
         std::transform(stem_lower.begin(), stem_lower.end(), stem_lower.begin(), ::towlower);
-        if (stem_lower != L"version") {
+        if (stem_lower != L"version" && stem_lower != L"winmm" && stem_lower != L"winhttp") {
             if (!ntfsdupe::cfgs::add_entry(ntfsdupe::cfgs::Mode::module_hide_handle, stem_lower)) return FALSE;
         }
         

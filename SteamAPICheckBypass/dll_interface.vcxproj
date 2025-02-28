@@ -242,6 +242,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <MASM Include="winhttp.asm" />
+    <MASM Include="winmm.asm" />
     <None Include="exports.def" />
     <MASM Include="version.asm">
       <FileType>Document</FileType>

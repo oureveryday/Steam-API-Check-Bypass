@@ -23,5 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <MASM Include="version.asm" />
+    <MASM Include="winmm.asm" />
+    <MASM Include="winhttp.asm" />
   </ItemGroup>
 </Project>
