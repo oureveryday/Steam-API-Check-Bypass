@@ -15,7 +15,7 @@ std::vector<std::wstring> initial_files = {
     L"steamapicheckbypass.json",
     L"steamapicheckbypass_config.json",
     L"SteamAPICheckBypass.json",
-    L"SteamAPICheckBypass_congig.json",
+    L"SteamAPICheckBypass_config.json",
     L"nt_file_dupe.json",
     L"nt_file_dupe_config.json",
     L"nt_fs_dupe.json",
