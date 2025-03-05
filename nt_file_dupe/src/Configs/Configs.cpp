@@ -409,7 +409,7 @@ bool ntfsdupe::cfgs::is_bypassed(const std::wstring_view &str) noexcept
     if (bypass_entries.size()) {
         auto tid_it = bypass_entries.find(GetCurrentThreadId());
         if (tid_it != bypass_entries.end()) {
-            ret = tid_it->second.find(str) != tid_it->second.end();
+            ret = tid_it->second.find(str.substr(str.find_last_of(L'\\') + 1)) != tid_it->second.end();
         }
     }
     LeaveCriticalSection(&bypass_files_cs);

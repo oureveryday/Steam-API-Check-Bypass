@@ -41,43 +41,33 @@ NTSTATUS NTAPI ntfsdupe::hooks::LdrGetDllHandle_hook(
                 if (dllname_new) {
                     ntfsdupe::hooks::copy_new_module_target(dllname_new.get(), DllName, cfg);
 
-                    USHORT fullDosPathBytes = 0;
-                    ntfsdupe::ntapis::GetFullDosPath(NULL, &fullDosPathBytes, dllname_new.get());
-                    if (fullDosPathBytes) {
-                        auto fullDosPath = unique_ptr_stack(wchar_t, fullDosPathBytes);
-                        if (fullDosPath) {
-                            // convert dos path to full
-                            bool conversion = ntfsdupe::ntapis::GetFullDosPath(fullDosPath.get(), &fullDosPathBytes, dllname_new.get());
-                            if (conversion) {
-                                ntfsdupe::helpers::upper(fullDosPath.get(), fullDosPathBytes / sizeof(wchar_t));
-                                std::wstring_view wsv(fullDosPath.get(), fullDosPathBytes / sizeof(wchar_t));
+                    ntfsdupe::helpers::upper(dllname_new.get(), len / sizeof(wchar_t));
+                    std::wstring_view wsv(dllname_new.get(), len / sizeof(wchar_t));
+                    wsv = wsv.substr(wsv.find_last_of(L'\\') + 1);
 
-                                ntfsdupe::cfgs::add_bypass(wsv);
-                                // backup original buffer
-                                const auto buffer_backup = DllName->Buffer;
-                                const auto length_backup = DllName->Length;
-                                const auto max_length_backup = DllName->MaximumLength;
-                                // set new buffer
-                                DllName->Buffer = dllname_new.get();
-                                DllName->Length = static_cast<USHORT>(wcslen(DllName->Buffer) * sizeof(wchar_t));
-                                DllName->MaximumLength = static_cast<USHORT>(len);
-                                // call original API
-                                const auto result = LdrGetDllHandle_original(
-                                    DllPath,
-                                    DllCharacteristics,
-                                    DllName,
-                                    DllHandle
-                                );
-                                // restore original buffer
-                                DllName->Buffer = buffer_backup;
-                                DllName->Length = length_backup;
-                                DllName->MaximumLength = max_length_backup;
-                                ntfsdupe::cfgs::remove_bypass(wsv);
+                    ntfsdupe::cfgs::add_bypass(wsv);
+                    // backup original buffer
+                    const auto buffer_backup = DllName->Buffer;
+                    const auto length_backup = DllName->Length;
+                    const auto max_length_backup = DllName->MaximumLength;
+                    // set new buffer
+                    DllName->Buffer = dllname_new.get();
+                    DllName->Length = static_cast<USHORT>(wcslen(DllName->Buffer) * sizeof(wchar_t));
+                    DllName->MaximumLength = static_cast<USHORT>(len);
+                    // call original API
+                    const auto result = LdrGetDllHandle_original(
+                        DllPath,
+                        DllCharacteristics,
+                        DllName,
+                        DllHandle
+                    );
+                    // restore original buffer
+                    DllName->Buffer = buffer_backup;
+                    DllName->Length = length_backup;
+                    DllName->MaximumLength = max_length_backup;
+                    ntfsdupe::cfgs::remove_bypass(wsv);
 
-                                return result;
-                            }
-                        }
-                    }
+                    return result;
                 }
             }
             break;
@@ -90,29 +80,20 @@ NTSTATUS NTAPI ntfsdupe::hooks::LdrGetDllHandle_hook(
             if (terminated_name) {
                 memcpy(terminated_name.get(), DllName->Buffer, DllName->Length);
                 terminated_name.get()[DllName->Length / sizeof(wchar_t)] = L'\0';
+                auto len = DllName->Length;
+                ntfsdupe::helpers::upper(terminated_name.get(), len / sizeof(wchar_t));
+                std::wstring_view wsv(terminated_name.get(), len / sizeof(wchar_t));
+                wsv = wsv.substr(wsv.find_last_of(L'\\') + 1);
 
-                USHORT fullDosPathBytes = 0;
-                ntfsdupe::ntapis::GetFullDosPath(NULL, &fullDosPathBytes, terminated_name.get());
-                if (fullDosPathBytes) {
-                    auto fullDosPath = unique_ptr_stack(wchar_t, fullDosPathBytes);
-                    if (fullDosPath) {
-                        // convert dos path to full
-                        bool conversion = ntfsdupe::ntapis::GetFullDosPath(fullDosPath.get(), &fullDosPathBytes, terminated_name.get());
-                        if (conversion) {
-                            ntfsdupe::helpers::upper(fullDosPath.get(), fullDosPathBytes / sizeof(wchar_t));
-                            std::wstring_view wsv(fullDosPath.get(), fullDosPathBytes / sizeof(wchar_t));
-                            ntfsdupe::cfgs::add_bypass(wsv);
-                            const auto result = LdrGetDllHandle_original(
-                                DllPath,
-                                DllCharacteristics,
-                                DllName,
-                                DllHandle
-                            );
-                            ntfsdupe::cfgs::remove_bypass(wsv);
-                            return result;
-                        }
-                    }
-                }
+                ntfsdupe::cfgs::add_bypass(wsv);
+                const auto result = LdrGetDllHandle_original(
+                    DllPath,
+                    DllCharacteristics,
+                    DllName,
+                    DllHandle
+                );
+                ntfsdupe::cfgs::remove_bypass(wsv);
+                return result;
             }
         }
 
