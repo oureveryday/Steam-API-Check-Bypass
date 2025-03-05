@@ -30,7 +30,7 @@ void ntfsdupe::hooks::copy_new_module_target(wchar_t* dllname_new, const PUNICOD
 }
 
 
-ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_dospath(wchar_t *dos_path)
+const ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_dospath(wchar_t *dos_path)
 {
     if (!dos_path || !dos_path[0]) return nullptr;
 
@@ -50,7 +50,7 @@ ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_dospath(wcha
     return ntfsdupe::cfgs::find_file_entry(std::wstring_view(fullDosPath.get(), fullDosPathBytes / sizeof(wchar_t)));
 }
 
-ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_ntpath(PCWSTR ntpath, ULONG ntpath_bytes)
+const ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_ntpath(PCWSTR ntpath, ULONG ntpath_bytes)
 {
     if (!ntpath || !ntpath[0] || !ntpath_bytes) return nullptr;
 
@@ -64,14 +64,14 @@ ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_ntpath(PCWST
     return find_single_file_obj_dospath(dosPath.get());
 }
 
-ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_ntpath(POBJECT_ATTRIBUTES ObjectAttributes)
+const ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_ntpath(POBJECT_ATTRIBUTES ObjectAttributes)
 {
     if (!ObjectAttributes || !ObjectAttributes->ObjectName) return nullptr;
 
     return find_single_file_obj_ntpath(ObjectAttributes->ObjectName->Buffer, ObjectAttributes->ObjectName->Length);
 }
 
-ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_base_handle(MultiQueryOffsets_t& query_info, HANDLE FileHandle, PVOID FileInformation)
+const ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::hooks::find_single_file_obj_base_handle(MultiQueryOffsets_t& query_info, HANDLE FileHandle, PVOID FileInformation)
 {
     // get base path from handle
     IO_STATUS_BLOCK localIoStatus;

@@ -15,6 +15,7 @@ namespace ntfsdupe::cfgs {
     using json = nlohmann::json;
 
     static CRITICAL_SECTION bypass_files_cs{};
+    static CRITICAL_SECTION hook_times_cs{};
     static std::wstring exe_dir{};
     // this storage holds all strings used (actual memory allocation), which are later referenced by the other containers
     // it is way cheaper to use string_view for other containers since it doesn't copy strings, and Ntxxx APIs use
@@ -23,8 +24,9 @@ namespace ntfsdupe::cfgs {
     static std::unordered_map<std::wstring_view, ntfsdupe::cfgs::FileCfgEntry> file_entries{};
     static std::unordered_map<std::wstring_view, ntfsdupe::cfgs::ModuleCfgEntry> module_entries{};
     static std::unordered_map<DWORD, std::unordered_map<std::wstring_view, size_t>> bypass_entries{};
+    static std::unordered_map<std::wstring_view, uint64_t> hook_times_entries{};
 
-    bool add_entry_file(Mode mode, const std::wstring& original, const std::wstring& target = std::wstring(), bool file_must_exist = false, HookTimesMode hook_times_cfg = HookTimesMode::all, int hook_time_n = 0);
+    bool add_entry_file(Mode mode, const std::wstring& original, const std::wstring& target = std::wstring(), bool file_must_exist = false, HookTimesMode hook_times_cfg = HookTimesMode::all, std::vector<uint64_t> hook_time_n = std::vector<uint64_t>());
     bool add_entry_module(Mode mode, const std::wstring& original, const std::wstring& target = std::wstring());
 }
 
@@ -34,6 +36,7 @@ bool ntfsdupe::cfgs::init()
     NTFSDUPE_DBG(L"ntfsdupe::cfgs::init()");
 
     InitializeCriticalSection(&bypass_files_cs);
+    InitializeCriticalSection(&hook_times_cs);
 
     exe_dir.clear();
     file_entries.clear();
@@ -71,7 +74,7 @@ const std::wstring& ntfsdupe::cfgs::get_exe_dir() noexcept
     return exe_dir;
 }
 
-bool ntfsdupe::cfgs::add_entry_file(Mode mode, const std::wstring& original, const std::wstring& target, bool file_must_exist, HookTimesMode hook_times_cfg, int hook_time_n)
+bool ntfsdupe::cfgs::add_entry_file(Mode mode, const std::wstring& original, const std::wstring& target, bool file_must_exist, HookTimesMode hook_times_cfg, std::vector<uint64_t> hook_time_n)
 {
     std::wstring _original = ntfsdupe::helpers::to_absolute(original, exe_dir);
     NTFSDUPE_DBG(L"  absolute original file: '%s'", _original.c_str());
@@ -126,6 +129,9 @@ bool ntfsdupe::cfgs::add_entry_file(Mode mode, const std::wstring& original, con
             entry.filename_bytes = filename_bytes;
 			entry.hook_times.mode = hook_times_cfg;
 			entry.hook_times.hook_time_n = hook_time_n;
+
+            uint64_t hook_time = hook_times_entries[_original_upper_ref];
+            hook_time = 0;
         }
 
         {
@@ -224,7 +230,7 @@ bool ntfsdupe::cfgs::add_entry_module(Mode mode, const std::wstring& original, c
     return false;
 }
 
-bool ntfsdupe::cfgs::add_entry(Mode mode, const std::wstring &original, const std::wstring &target, bool file_must_exist, HookTimesMode hook_times_cfg, int hook_time_n)
+bool ntfsdupe::cfgs::add_entry(Mode mode, const std::wstring &original, const std::wstring &target, bool file_must_exist, HookTimesMode hook_times_cfg, std::vector<uint64_t> hook_time_n)
 {
     NTFSDUPE_DBG(L"ntfsdupe::cfgs::add_entry() %i '%s' '%s'", (int)mode, original.c_str(), target.c_str());
 
@@ -327,8 +333,12 @@ bool ntfsdupe::cfgs::load_file(const wchar_t *file)
                 }
                 NTFSDUPE_DBG(L"  hook_times_mode = %d", hook_times_cfg);
 
-                int hook_time_n = item.value().value("hook_time_n", 0);
-                NTFSDUPE_DBG(L"  hook_time_n: '%i'", hook_time_n);
+                std::vector<uint64_t> hook_time_n = item.value().value("hook_time_n", std::vector<uint64_t>());
+                NTFSDUPE_DBG(L"  hook_time_n size: '%zu', values: %s", hook_time_n.size(),
+                    std::accumulate(hook_time_n.begin(), hook_time_n.end(), std::wstring(),
+                        [](const std::wstring& a, uint64_t b) {
+                            return a + (a.empty() ? L"" : L", ") + std::to_wstring(b);
+                        }).c_str());
 
                 if (add_entry(mode, original, target, file_must_exist, hook_times_cfg, hook_time_n)) ++added_entries;
             } catch (const std::exception &e) {
@@ -343,7 +353,7 @@ bool ntfsdupe::cfgs::load_file(const wchar_t *file)
     }
 }
 
-ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::cfgs::find_file_entry(const std::wstring_view &str) noexcept
+const ntfsdupe::cfgs::FileCfgEntry* ntfsdupe::cfgs::find_file_entry(const std::wstring_view &str) noexcept
 {
     if (ntfsdupe::cfgs::file_entries.empty()) return nullptr;
 
@@ -414,5 +424,38 @@ bool ntfsdupe::cfgs::is_bypassed(const std::wstring_view &str) noexcept
     }
     LeaveCriticalSection(&bypass_files_cs);
     
+    return ret;
+}
+
+bool ntfsdupe::cfgs::is_count_bypass(const ntfsdupe::cfgs::FileCfgEntry* cfg) noexcept
+{
+    bool ret = false;
+
+    if (cfg->hook_times.mode == HookTimesMode::all)
+    {
+        return false;
+    }
+
+    EnterCriticalSection(&hook_times_cs);
+    if (hook_times_entries.size()) {
+        auto curr_hook_time_num = hook_times_entries.find(ntfsdupe::helpers::upper(cfg->original));
+        if (curr_hook_time_num != hook_times_entries.end()) {
+            curr_hook_time_num->second++;
+            auto found = std::find(cfg->hook_times.hook_time_n.begin(), cfg->hook_times.hook_time_n.end(), curr_hook_time_num->second) != cfg->hook_times.hook_time_n.end();
+            switch (cfg->hook_times.mode) {
+                case HookTimesMode::nth_time_only:
+				    ret = !found;
+				    break;
+				case HookTimesMode::not_nth_time_only:
+					ret = found;
+					break;
+            }
+            if (ret) {
+                NTFSDUPE_DBG(L"ntfsdupe::cfgs::is_count_bypass bypass hook file: '%s', current hook time: %d", cfg->original.c_str(), curr_hook_time_num->second);
+            }
+        }
+    }
+    LeaveCriticalSection(&hook_times_cs);
+
     return ret;
 }

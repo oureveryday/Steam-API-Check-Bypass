@@ -26,24 +26,14 @@ NTSTATUS NTAPI ntfsdupe::hooks::NtOpenDirectoryObject_hook(
             }
 
             case ntfsdupe::cfgs::FileType::original: {
-                cfg->hook_times.hook_times++;
-                if (cfg->hook_times.mode == ntfsdupe::cfgs::HookTimesMode::nth_time_only && cfg->hook_times.hook_times != cfg->hook_times.hook_time_n) {
-                    NTFSDUPE_DBG(L"ntfsdupe::hooks::NtOpenDirectoryObject_hook original '%s', %d times, return original", cfg->original.c_str(), cfg->hook_times.hook_times);
+                if (ntfsdupe::cfgs::is_count_bypass(cfg)) {
                     return NtOpenDirectoryObject_original(
                         DirectoryHandle,
                         DesiredAccess,
                         ObjectAttributes
                     );
                 }
-                if (cfg->hook_times.mode == ntfsdupe::cfgs::HookTimesMode::not_nth_time_only && cfg->hook_times.hook_times == cfg->hook_times.hook_time_n) {
-                    NTFSDUPE_DBG(L"ntfsdupe::hooks::NtOpenDirectoryObject_hook original '%s', %d times, return original", cfg->original.c_str(), cfg->hook_times.hook_times);
-                    return NtOpenDirectoryObject_original(
-                        DirectoryHandle,
-                        DesiredAccess,
-                        ObjectAttributes
-                    );
-                }
-                NTFSDUPE_DBG(L"ntfsdupe::hooks::NtOpenDirectoryObject_hook original '%s', %d times", cfg->original.c_str(), cfg->hook_times.hook_times);
+                NTFSDUPE_DBG(L"ntfsdupe::hooks::NtOpenDirectoryObject_hook original '%s'", cfg->original.c_str());
                 // it would be cheaper to just manipulate the original str, but not sure if that's safe
 
                 auto len = (ObjectAttributes->ObjectName->Length - cfg->filename_bytes + (cfg->target.length() * sizeof(wchar_t)) ) + sizeof(wchar_t);;

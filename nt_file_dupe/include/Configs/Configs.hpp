@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <string>
 #include <string_view>
 
@@ -21,10 +22,9 @@ namespace ntfsdupe::cfgs {
     };
 
 	struct HookTimes {
-		// only works when mode = file_redirect, and ntcreate/openfile or create/opendirectoryobject(ex)
+		// only works when mode = file_redirect
 		HookTimesMode mode{ HookTimesMode::all };
-		uint64_t hook_time_n{ 0 };
-        uint64_t hook_times{ 0 };
+		std::vector<uint64_t> hook_time_n {};
 	};
 
     // file operation/action type
@@ -79,11 +79,11 @@ namespace ntfsdupe::cfgs {
 
     const std::wstring& get_exe_dir() noexcept;
 
-    bool add_entry(Mode mode, const std::wstring &original, const std::wstring &target = std::wstring(), bool file_must_exist = false, HookTimesMode hook_times_cfg = HookTimesMode::all, int hook_time_n = 0);
+    bool add_entry(Mode mode, const std::wstring &original, const std::wstring &target = std::wstring(), bool file_must_exist = false, HookTimesMode hook_times_cfg = HookTimesMode::all, std::vector<uint64_t> hook_time_n = std::vector<uint64_t>());
 
     bool load_file(const wchar_t *file);
 
-    FileCfgEntry* find_file_entry(const std::wstring_view &str) noexcept;
+    const FileCfgEntry* find_file_entry(const std::wstring_view &str) noexcept;
     
     const ModuleCfgEntry* find_module_entry(const std::wstring_view &str) noexcept;
 
@@ -92,6 +92,8 @@ namespace ntfsdupe::cfgs {
     void remove_bypass(const std::wstring_view &str) noexcept;
 
     bool is_bypassed(const std::wstring_view &str) noexcept;
+
+    bool is_count_bypass(const ntfsdupe::cfgs::FileCfgEntry* cfg) noexcept;
 
 }
 

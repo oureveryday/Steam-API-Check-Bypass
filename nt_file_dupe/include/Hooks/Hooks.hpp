@@ -347,10 +347,10 @@ namespace ntfsdupe::hooks {
     void copy_new_file_target(wchar_t *object_name_new, const PUNICODE_STRING ObjectName, const ntfsdupe::cfgs::FileCfgEntry *cfg);
     void copy_new_module_target(wchar_t *dllname_new, const PUNICODE_STRING DllName, const ntfsdupe::cfgs::ModuleCfgEntry *cfg);
 
-    ntfsdupe::cfgs::FileCfgEntry* find_single_file_obj_dospath(wchar_t* dos_path); // dos path has to be null terminated
-    ntfsdupe::cfgs::FileCfgEntry* find_single_file_obj_ntpath(PCWSTR ntpath, ULONG ntpath_bytes);
-    ntfsdupe::cfgs::FileCfgEntry* find_single_file_obj_ntpath(POBJECT_ATTRIBUTES ObjectAttributes);
-    ntfsdupe::cfgs::FileCfgEntry* find_single_file_obj_base_handle(MultiQueryOffsets_t& query_info, HANDLE FileHandle, PVOID FileInformation);
+    const ntfsdupe::cfgs::FileCfgEntry* find_single_file_obj_dospath(wchar_t* dos_path); // dos path has to be null terminated
+    const ntfsdupe::cfgs::FileCfgEntry* find_single_file_obj_ntpath(PCWSTR ntpath, ULONG ntpath_bytes);
+    const ntfsdupe::cfgs::FileCfgEntry* find_single_file_obj_ntpath(POBJECT_ATTRIBUTES ObjectAttributes);
+    const ntfsdupe::cfgs::FileCfgEntry* find_single_file_obj_base_handle(MultiQueryOffsets_t& query_info, HANDLE FileHandle, PVOID FileInformation);
     
     const ntfsdupe::cfgs::ModuleCfgEntry* find_module_obj_filename(PUNICODE_STRING  DllName);
 
