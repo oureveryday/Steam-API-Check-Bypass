@@ -4,7 +4,7 @@
       "mode": "file_redirect",
       "to": "steam_api64.dll.bak",
       "hook_times_mode": "nth_time_only",
-      "hook_time_n": 1
+      "hook_time_n": [1,2,3]
     },
     "game.exe":
     {
